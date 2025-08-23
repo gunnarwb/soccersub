@@ -46,7 +46,7 @@ export default function PlayerCircle({
   const getPlayerStatusColor = () => {
     if (player.position) return 'bg-green-500 border-green-600' // On field, positioned
     if (player.isOnField) return 'bg-blue-500 border-blue-600' // On field, not positioned
-    return 'bg-gray-400 border-gray-500' // Off field
+    return 'bg-red-400 border-red-500' // Subbed out
   }
 
   return (
@@ -84,10 +84,10 @@ export default function PlayerCircle({
       {/* Status indicator */}
       <div className="flex items-center space-x-1">
         <div className={`w-2 h-2 rounded-full ${
-          player.position ? 'bg-green-500' : player.isOnField ? 'bg-blue-500' : 'bg-gray-400'
+          player.position ? 'bg-green-500' : player.isOnField ? 'bg-blue-500' : 'bg-red-400'
         }`}></div>
         <span className="text-xs text-gray-600">
-          {player.position ? player.position : player.isOnField ? 'On Field' : 'Bench'}
+          {player.position ? player.position : player.isOnField ? 'On Field' : 'Subbed Out'}
         </span>
       </div>
     </div>

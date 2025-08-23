@@ -185,9 +185,8 @@ export default function FieldScreen({
     return players.find(p => p.position === positionName)
   }
 
-  const availablePlayers = currentMatch?.isActive 
-    ? players.filter(p => p.isOnField && !p.position)
-    : players.filter(p => !p.position)
+  // Bottom section shows all players NOT currently positioned on the field (the bench)
+  const benchPlayers = players.filter(p => !p.position)
 
   if (!formation) {
     return (
@@ -261,26 +260,21 @@ export default function FieldScreen({
         )}
       </div>
 
-      {/* Bottom Player Panel */}
+      {/* Bottom Player Panel - The Bench */}
       <div className="bg-white border-t-2 border-gray-200 p-4" style={{ height: '33vh' }}>
         <div className="h-full flex flex-col">
           <h3 className="text-sm font-medium text-gray-700 mb-3">
-            {currentMatch?.isActive ? 'Available Players' : 'All Players'}
+            The Bench ({benchPlayers.length} players)
           </h3>
           
-          {availablePlayers.length === 0 ? (
+          {benchPlayers.length === 0 ? (
             <div className="flex-1 flex items-center justify-center text-gray-500">
-              <p className="text-center">
-                {currentMatch?.isActive 
-                  ? 'No players available for positioning' 
-                  : 'All players are positioned'
-                }
-              </p>
+              <p className="text-center">All players are positioned on the field</p>
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto">
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
-                {availablePlayers.map(player => (
+                {benchPlayers.map(player => (
                   <PlayerCircle 
                     key={player.id} 
                     player={player} 
