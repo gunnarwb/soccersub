@@ -73,6 +73,72 @@ export default function SettingsScreen({
     }
   }
 
+  const fixDataInconsistencies = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Fix rule: If player has a position, they MUST be on field
+      // If player is off field, they CANNOT have a position
+      const { error } = await supabase.rpc('fix_player_inconsistencies', {
+        target_user_id: user.id
+      })
+
+      if (error) {
+        // If RPC doesn't exist, do it manually
+        const { data: playersData, error: fetchError } = await supabase
+          .from('players')
+          .select('*')
+          .eq('user_id', user.id)
+
+        if (fetchError) throw fetchError
+
+        const updates = []
+        for (const player of playersData) {
+          let needsUpdate = false
+          const updateData: any = {}
+
+          // Rule 1: If has position, must be on field
+          if (player.position && !player.is_on_field) {
+            updateData.is_on_field = true
+            needsUpdate = true
+          }
+
+          // Rule 2: If off field, cannot have position
+          if (!player.is_on_field && player.position) {
+            updateData.position = null
+            updateData.position_time_start = null
+            needsUpdate = true
+          }
+
+          if (needsUpdate) {
+            updates.push(
+              supabase
+                .from('players')
+                .update(updateData)
+                .eq('id', player.id)
+            )
+          }
+        }
+
+        if (updates.length > 0) {
+          await Promise.all(updates)
+          alert(`Fixed ${updates.length} data inconsistencies`)
+        } else {
+          alert('No inconsistencies found')
+        }
+      } else {
+        alert('Data inconsistencies fixed')
+      }
+
+      // Refresh the data
+      await refreshPlayerData()
+    } catch (error: any) {
+      console.error('Error fixing data inconsistencies:', error)
+      alert(`Error fixing data: ${error.message}`)
+    }
+  }
+
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* Header */}
@@ -253,17 +319,38 @@ export default function SettingsScreen({
             <div className="mt-4 p-3 bg-gray-50 rounded text-xs">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium text-gray-700">Debug Info:</div>
-                <button
-                  onClick={refreshPlayerData}
-                  className="flex items-center space-x-1 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  <span>Refresh</span>
-                </button>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={refreshPlayerData}
+                    className="flex items-center space-x-1 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    <span>Refresh</span>
+                  </button>
+                  <button
+                    onClick={fixDataInconsistencies}
+                    className="flex items-center space-x-1 text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                  >
+                    <span>Fix Data</span>
+                  </button>
+                </div>
               </div>
               <div>Players on field: {players.filter(p => p.isOnField).map(p => p.name).join(', ') || 'None'}</div>
               <div className="mt-1">Players off field: {players.filter(p => !p.isOnField).map(p => p.name).join(', ') || 'None'}</div>
               <div className="mt-1">Players with positions: {players.filter(p => p.position).map(p => `${p.name}(${p.position})`).join(', ') || 'None'}</div>
+              
+              {/* Highlight inconsistencies */}
+              {players.some(p => p.position && !p.isOnField) && (
+                <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
+                  <div className="font-medium text-red-700">⚠️ Data Inconsistency Detected:</div>
+                  <div className="text-red-600">
+                    Players with positions but marked as off-field: {
+                      players.filter(p => p.position && !p.isOnField).map(p => p.name).join(', ')
+                    }
+                  </div>
+                  <div className="text-red-600 text-xs mt-1">Click "Fix Data" to resolve this.</div>
+                </div>
+              )}
             </div>
           </div>
         </div>

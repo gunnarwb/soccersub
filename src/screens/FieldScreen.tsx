@@ -96,15 +96,17 @@ export default function FieldScreen({
         return p
       })
 
-      // Update database for both players
+      // Update database for both players with data consistency validation
       await Promise.all([
         supabase.from('players').update({
+          is_on_field: targetPlayerPosition ? true : false, // Ensure consistency
           position: targetPlayerPosition,
           position_time_start: currentMatch?.isActive ? now : null,
           total_position_time: updatedPlayers.find(p => p.id === selectedPlayerId)?.totalPositionTime
         }).eq('id', selectedPlayerId),
         
         supabase.from('players').update({
+          is_on_field: selectedPlayerPosition ? true : false, // Ensure consistency
           position: selectedPlayerPosition,
           position_time_start: currentMatch?.isActive ? now : null,
           total_position_time: updatedPlayers.find(p => p.id === targetPlayerId)?.totalPositionTime
@@ -128,7 +130,7 @@ export default function FieldScreen({
     const now = Date.now()
     let updatedPlayer = { ...player }
 
-    // If player is not on field, this is a substitution (sub them in)
+    // RULE: If player gets a position, they MUST be on field
     if (!player.isOnField) {
       updatedPlayer.isOnField = true
       updatedPlayer.fieldTimeStart = now
@@ -159,15 +161,18 @@ export default function FieldScreen({
     updatedPlayer.positionTimeStart = currentMatch?.isActive ? now : undefined
 
     try {
+      // VALIDATION: Ensure data consistency
+      const updateData = {
+        is_on_field: true, // MUST be true if has position
+        field_time_start: updatedPlayer.fieldTimeStart,
+        position: positionName,
+        position_time_start: updatedPlayer.positionTimeStart,
+        total_position_time: updatedPlayer.totalPositionTime
+      }
+
       await supabase
         .from('players')
-        .update({
-          is_on_field: updatedPlayer.isOnField,
-          field_time_start: updatedPlayer.fieldTimeStart,
-          position: positionName,
-          position_time_start: updatedPlayer.positionTimeStart,
-          total_position_time: updatedPlayer.totalPositionTime
-        })
+        .update(updateData)
         .eq('id', playerId)
 
       setPlayers(prev => 
@@ -366,11 +371,37 @@ export default function FieldScreen({
       </div>
 
       {/* Bottom Player Panel - The Bench */}
-      <div className="bg-white border-t-2 border-gray-200 p-4" style={{ height: '33vh' }}>
+      <div 
+        className={`bg-white border-t-2 border-gray-200 p-4 cursor-pointer transition-colors ${
+          selectedPlayerId && players.find(p => p.id === selectedPlayerId)?.position 
+            ? 'hover:bg-red-50 border-red-200' 
+            : ''
+        }`}
+        style={{ height: '33vh' }}
+        onClick={() => {
+          if (selectedPlayerId) {
+            const selectedPlayer = players.find(p => p.id === selectedPlayerId)
+            if (selectedPlayer?.position) {
+              // Sub out the selected positioned player
+              subPlayerOut(selectedPlayerId)
+            }
+          }
+        }}
+        title={
+          selectedPlayerId && players.find(p => p.id === selectedPlayerId)?.position
+            ? `Click bench area to sub out ${players.find(p => p.id === selectedPlayerId)?.name}`
+            : 'The Bench - All non-positioned players'
+        }
+      >
         <div className="h-full flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-gray-700">
               The Bench ({benchPlayers.length} players)
+              {selectedPlayerId && players.find(p => p.id === selectedPlayerId)?.position && (
+                <span className="ml-2 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full">
+                  Click here to sub out
+                </span>
+              )}
             </h3>
             {selectedPlayerId && (
               <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
