@@ -304,8 +304,11 @@ export default function FieldScreen({
     return players.find(p => p.position === positionName)
   }
 
-  // Bottom section shows all players NOT currently positioned on the field (the bench)
-  const benchPlayers = players.filter(p => !p.position)
+  // Bottom section shows only players who are off the field (the actual bench)
+  const benchPlayers = players.filter(p => !p.isOnField)
+  
+  // Players on field but not positioned need a different treatment
+  const onFieldUnpositioned = players.filter(p => p.isOnField && !p.position)
 
   if (!formation) {
     return (
@@ -317,6 +320,28 @@ export default function FieldScreen({
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
+      {/* On-field but unpositioned players */}
+      {onFieldUnpositioned.length > 0 && (
+        <div className="bg-blue-500 bg-opacity-90 p-2">
+          <div className="flex items-center justify-center space-x-2">
+            <span className="text-white text-xs font-medium">On field, need positioning:</span>
+            <div className="flex space-x-2">
+              {onFieldUnpositioned.map(player => (
+                <div
+                  key={player.id}
+                  onClick={() => handlePlayerClick(player.id)}
+                  className={`bg-white text-blue-800 px-2 py-1 rounded text-xs cursor-pointer transition-all ${
+                    selectedPlayerId === player.id ? 'ring-2 ring-yellow-400' : 'hover:bg-blue-50'
+                  }`}
+                >
+                  {player.name}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Full Screen Soccer Field */}
       <div 
         className="flex-1 relative bg-gradient-to-b from-pitch-light to-pitch-dark"
@@ -396,7 +421,7 @@ export default function FieldScreen({
         <div className="h-full flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-gray-700">
-              The Bench ({benchPlayers.length} players)
+              Substitutes Bench ({benchPlayers.length} players)
               {selectedPlayerId && players.find(p => p.id === selectedPlayerId)?.position && (
                 <span className="ml-2 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full">
                   Click here to sub out
