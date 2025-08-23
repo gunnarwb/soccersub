@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
+import { TouchBackend } from 'react-dnd-touch-backend'
 import { supabase } from './lib/supabase'
 import PlayerManager from './components/PlayerManager'
 import SoccerPitch from './components/SoccerPitch'
@@ -8,6 +9,11 @@ import MatchControls from './components/MatchControls'
 import Auth from './components/Auth'
 import { Player, Match, GameFormat } from './types'
 
+
+// Detect if we're on a touch device
+const isTouchDevice = () => {
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0
+}
 
 function App() {
   const [user, setUser] = useState<any>(null)
@@ -119,8 +125,11 @@ function App() {
     return <Auth />
   }
 
+  const dndBackend = isTouchDevice() ? TouchBackend : HTML5Backend
+  const dndOptions = isTouchDevice() ? { enableMouseEvents: true } : {}
+
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DndProvider backend={dndBackend} options={dndOptions}>
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
           <div className="px-4 py-3 flex justify-between items-center">

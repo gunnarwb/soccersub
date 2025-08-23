@@ -21,13 +21,18 @@ export default function PlayerCard({ player, disabled = false }: PlayerCardProps
     <div
       ref={drag}
       className={`
-        inline-flex items-center space-x-2 bg-white border-2 border-blue-200 rounded-lg px-3 py-2 shadow-sm cursor-pointer transition-all
-        ${isDragging ? 'opacity-50 scale-95' : 'hover:shadow-md hover:border-blue-300'}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+        inline-flex items-center space-x-2 bg-white border-2 border-blue-200 rounded-lg px-3 py-2 shadow-sm transition-all touch-manipulation select-none
+        ${isDragging ? 'opacity-50 scale-95 rotate-2' : 'hover:shadow-md hover:border-blue-300 hover:scale-105'}
+        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}
+        ${!disabled ? 'animate-pulse-border' : ''}
       `}
       style={{ 
         cursor: disabled ? 'not-allowed' : (isDragging ? 'grabbing' : 'grab'),
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        touchAction: 'manipulation'
       }}
+      title={disabled ? '' : 'Drag to field position'}
     >
       {player.number && (
         <div className="flex items-center">

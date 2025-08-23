@@ -23,4 +23,17 @@ html, body {
   .touch-manipulation {
     touch-action: manipulation;
   }
+  
+  .animate-pulse-border {
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: rgb(147 197 253);
+  }
+  50% {
+    border-color: rgb(59 130 246);
+  }
 }
