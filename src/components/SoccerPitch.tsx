@@ -179,7 +179,9 @@ export default function SoccerPitch({
         }`}
         style={{
           aspectRatio: '3/2',
-          minHeight: '400px'
+          minHeight: '300px',
+          height: 'min(60vh, 500px)',
+          width: '100%'
         }}
       >
         {/* Field markings */}

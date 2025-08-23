@@ -142,8 +142,8 @@ function App() {
             setPlayers={setPlayers}
           />
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
+          <div className="space-y-6 md:space-y-0 md:grid md:grid-cols-1 lg:grid-cols-3 md:gap-6">
+            <div className="order-2 lg:order-1 lg:col-span-1">
               <PlayerManager 
                 players={players}
                 setPlayers={setPlayers}
@@ -151,7 +151,7 @@ function App() {
               />
             </div>
             
-            <div className="lg:col-span-2">
+            <div className="order-1 lg:order-2 lg:col-span-2">
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Game Format
@@ -159,7 +159,7 @@ function App() {
                 <select
                   value={gameFormat}
                   onChange={(e) => setGameFormat(e.target.value as GameFormat)}
-                  className="border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full md:w-auto border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="7v7">7v7</option>
                   <option value="9v9">9v9</option>

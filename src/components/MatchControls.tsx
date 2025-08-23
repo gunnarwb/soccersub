@@ -50,10 +50,15 @@ export default function MatchControls({
   const startMatch = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        alert('You must be logged in to start a match')
+        return
+      }
 
       const now = Date.now()
       const today = new Date().toISOString().split('T')[0]
+
+      console.log('Starting match:', { user_id: user.id, date: today })
 
       const { data, error } = await supabase
         .from('matches')
@@ -69,7 +74,13 @@ export default function MatchControls({
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error starting match:', error)
+        alert(`Error starting match: ${error.message}`)
+        return
+      }
+
+      console.log('Match started successfully:', data)
 
       const newMatch: Match = {
         id: data.id,
@@ -88,8 +99,9 @@ export default function MatchControls({
 
       setCurrentMatch(newMatch)
       setMatchTime(0)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting match:', error)
+      alert(`Error starting match: ${error.message}`)
     }
   }
 

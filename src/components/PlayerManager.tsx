@@ -20,7 +20,12 @@ export default function PlayerManager({ players, setPlayers, currentMatch }: Pla
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        alert('You must be logged in to add players')
+        return
+      }
+
+      console.log('Adding player:', { name: newPlayerName.trim(), user_id: user.id })
 
       const { data, error } = await supabase
         .from('players')
@@ -32,7 +37,13 @@ export default function PlayerManager({ players, setPlayers, currentMatch }: Pla
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        alert(`Error adding player: ${error.message}`)
+        return
+      }
+
+      console.log('Player added successfully:', data)
 
       const newPlayer: Player = {
         id: data.id,
@@ -52,8 +63,9 @@ export default function PlayerManager({ players, setPlayers, currentMatch }: Pla
       setNewPlayerName('')
       setNewPlayerNumber('')
       setIsAddingPlayer(false)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding player:', error)
+      alert(`Error adding player: ${error.message}`)
     }
   }
 
