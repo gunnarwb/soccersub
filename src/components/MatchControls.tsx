@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useSettings } from '../contexts/SettingsContext'
 import { Player, Match } from '../types'
 import { Play, Pause, Square, Clock, Calendar, Users } from 'lucide-react'
 
@@ -16,11 +17,11 @@ export default function MatchControls({
   players, 
   setPlayers 
 }: MatchControlsProps) {
+  const { settings } = useSettings()
   const [matchTime, setMatchTime] = useState(0)
   const [isHalfTime, setIsHalfTime] = useState(false)
   const [opponent, setOpponent] = useState('')
   const [score, setScore] = useState('')
-  const [duration, setDuration] = useState(90)
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -67,7 +68,7 @@ export default function MatchControls({
           opponent: opponent || null,
           score: score || null,
           start_time: now,
-          duration: duration,
+          duration: settings.matchDuration,
           is_active: true,
           user_id: user.id
         })
@@ -261,18 +262,11 @@ export default function MatchControls({
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Match Duration (minutes)
+                Match Duration
               </label>
-              <select
-                value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value={60}>60 minutes</option>
-                <option value={70}>70 minutes</option>
-                <option value={80}>80 minutes</option>
-                <option value={90}>90 minutes</option>
-              </select>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
+                {settings.matchDuration} minutes (set in Settings)
+              </div>
             </div>
           </div>
 

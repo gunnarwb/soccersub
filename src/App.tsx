@@ -5,14 +5,14 @@ import BottomNav, { TabType } from './components/BottomNav'
 import PlayersScreen from './screens/PlayersScreen'
 import FieldScreen from './screens/FieldScreen'
 import SettingsScreen from './screens/SettingsScreen'
-import { Player, Match, GameFormat } from './types'
+import { SettingsProvider } from './contexts/SettingsContext'
+import { Player, Match } from './types'
 
 function App() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [players, setPlayers] = useState<Player[]>([])
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null)
-  const [gameFormat, setGameFormat] = useState<GameFormat>('11v11')
   const [activeTab, setActiveTab] = useState<TabType>('field')
 
   useEffect(() => {
@@ -115,7 +115,11 @@ function App() {
   }
 
   if (!user) {
-    return <Auth />
+    return (
+      <SettingsProvider>
+        <Auth />
+      </SettingsProvider>
+    )
   }
 
   const renderActiveScreen = () => {
@@ -133,7 +137,6 @@ function App() {
           <FieldScreen 
             players={players}
             setPlayers={setPlayers}
-            gameFormat={gameFormat}
             currentMatch={currentMatch}
           />
         )
@@ -144,8 +147,6 @@ function App() {
             setCurrentMatch={setCurrentMatch}
             players={players}
             setPlayers={setPlayers}
-            gameFormat={gameFormat}
-            setGameFormat={setGameFormat}
           />
         )
       default:
@@ -154,18 +155,20 @@ function App() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden">
-        {renderActiveScreen()}
-      </div>
+    <SettingsProvider>
+      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-hidden">
+          {renderActiveScreen()}
+        </div>
 
-      {/* Bottom Navigation */}
-      <BottomNav 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
-    </div>
+        {/* Bottom Navigation */}
+        <BottomNav 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+      </div>
+    </SettingsProvider>
   )
 }
 

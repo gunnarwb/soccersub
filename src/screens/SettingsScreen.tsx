@@ -1,30 +1,30 @@
 import { supabase } from '../lib/supabase'
-import { GameFormat, Match, Player } from '../types'
+import { Match, Player } from '../types'
+import { useSettings } from '../contexts/SettingsContext'
+import { getFormationsByGameFormat } from '../utils/formations'
 import MatchControls from '../components/MatchControls'
-import { Settings, Users, Clock, LogOut, RefreshCw } from 'lucide-react'
+import { Settings, Users, Clock, LogOut, RefreshCw, MapPin } from 'lucide-react'
 
 interface SettingsScreenProps {
   currentMatch: Match | null
   setCurrentMatch: React.Dispatch<React.SetStateAction<Match | null>>
   players: Player[]
   setPlayers: React.Dispatch<React.SetStateAction<Player[]>>
-  gameFormat: GameFormat
-  setGameFormat: React.Dispatch<React.SetStateAction<GameFormat>>
 }
 
 export default function SettingsScreen({ 
   currentMatch, 
   setCurrentMatch, 
   players, 
-  setPlayers,
-  gameFormat,
-  setGameFormat
+  setPlayers
 }: SettingsScreenProps) {
+  const { settings, updateSettings } = useSettings()
+  const availableFormations = getFormationsByGameFormat(settings.gameFormat)
 
   const gameFormats = [
-    { value: '7v7' as GameFormat, label: '7v7 (Youth)', description: 'Smaller field, 7 players each side' },
-    { value: '9v9' as GameFormat, label: '9v9 (Youth)', description: 'Medium field, 9 players each side' },
-    { value: '11v11' as GameFormat, label: '11v11 (Full)', description: 'Full field, 11 players each side' },
+    { value: '7v7', label: '7v7 (Youth)', description: 'Smaller field, 7 players each side' },
+    { value: '9v9', label: '9v9 (Youth)', description: 'Medium field, 9 players each side' },
+    { value: '11v11', label: '11v11 (Full)', description: 'Full field, 11 players each side' },
   ]
 
   const handleSignOut = async () => {
@@ -119,7 +119,7 @@ export default function SettingsScreen({
               <label
                 key={format.value}
                 className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  gameFormat === format.value 
+                  settings.gameFormat === format.value 
                     ? 'border-green-500 bg-green-50' 
                     : 'border-gray-200 hover:bg-gray-50'
                 }`}
@@ -128,8 +128,8 @@ export default function SettingsScreen({
                   type="radio"
                   name="gameFormat"
                   value={format.value}
-                  checked={gameFormat === format.value}
-                  onChange={(e) => setGameFormat(e.target.value as GameFormat)}
+                  checked={settings.gameFormat === format.value}
+                  onChange={(e) => updateSettings({ gameFormat: e.target.value as any })}
                   className="mt-1 text-green-600 focus:ring-green-500"
                 />
                 <div className="flex-1">
@@ -138,6 +138,80 @@ export default function SettingsScreen({
                 </div>
               </label>
             ))}
+          </div>
+        </div>
+
+        {/* Formation Selection */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-4 border-b">
+            <h3 className="font-medium text-gray-900 flex items-center">
+              <MapPin className="h-4 w-4 mr-2" />
+              Formation Layout
+            </h3>
+          </div>
+          <div className="p-4 space-y-3">
+            {availableFormations.map((formation) => (
+              <label
+                key={formation.id}
+                className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  settings.selectedFormationId === formation.id 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="formation"
+                  value={formation.id}
+                  checked={settings.selectedFormationId === formation.id}
+                  onChange={(e) => updateSettings({ selectedFormationId: e.target.value })}
+                  className="mt-1 text-blue-600 focus:ring-blue-500"
+                />
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">{formation.name}</div>
+                  <div className="text-sm text-gray-600">
+                    {formation.playerCount} players - 
+                    {formation.positions.filter(p => p.role === 'defender').length} defenders,
+                    {formation.positions.filter(p => p.role === 'midfielder').length} midfielders,
+                    {formation.positions.filter(p => p.role === 'forward').length} forwards
+                  </div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Match Duration */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="p-4 border-b">
+            <h3 className="font-medium text-gray-900 flex items-center">
+              <Clock className="h-4 w-4 mr-2" />
+              Match Duration
+            </h3>
+          </div>
+          <div className="p-4">
+            <div className="space-y-3">
+              {[60, 70, 80, 90].map((duration) => (
+                <label
+                  key={duration}
+                  className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    settings.matchDuration === duration 
+                      ? 'border-green-500 bg-green-50' 
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="duration"
+                    value={duration}
+                    checked={settings.matchDuration === duration}
+                    onChange={(e) => updateSettings({ matchDuration: parseInt(e.target.value) })}
+                    className="text-green-600 focus:ring-green-500"
+                  />
+                  <span className="font-medium text-gray-900">{duration} minutes</span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -206,7 +280,15 @@ export default function SettingsScreen({
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Game Format</span>
-              <span className="text-gray-900">{gameFormat}</span>
+              <span className="text-gray-900">{settings.gameFormat}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Formation</span>
+              <span className="text-gray-900">{availableFormations.find(f => f.id === settings.selectedFormationId)?.name || 'Not set'}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Match Duration</span>
+              <span className="text-gray-900">{settings.matchDuration} minutes</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Match Status</span>

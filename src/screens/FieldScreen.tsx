@@ -1,26 +1,25 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Player, Match, GameFormat } from '../types'
-import { getFormationsByGameFormat } from '../utils/formations'
+import { Player, Match } from '../types'
+import { getFormationById } from '../utils/formations'
+import { useSettings } from '../contexts/SettingsContext'
 import PositionSlot from '../components/PositionSlot'
 import PlayerCircle from '../components/PlayerCircle'
 
 interface FieldScreenProps {
   players: Player[]
   setPlayers: React.Dispatch<React.SetStateAction<Player[]>>
-  gameFormat: GameFormat
   currentMatch: Match | null
 }
 
 export default function FieldScreen({ 
   players, 
   setPlayers, 
-  gameFormat, 
   currentMatch 
 }: FieldScreenProps) {
+  const { settings } = useSettings()
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
-  const formations = getFormationsByGameFormat(gameFormat)
-  const formation = formations[0] // Use first formation for now
+  const formation = getFormationById(settings.selectedFormationId)
 
 
   const swapPlayers = async (selectedPlayerId: string, targetPlayerId?: string, targetPosition?: string) => {
@@ -236,7 +235,7 @@ export default function FieldScreen({
   if (!formation) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">No formations available for {gameFormat}</p>
+        <p className="text-gray-500">Formation not found. Please check settings.</p>
       </div>
     )
   }
