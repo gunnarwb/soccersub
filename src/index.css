@@ -32,6 +32,14 @@ html, body {
   .animate-pulse-border {
     animation: pulse-border 2s ease-in-out infinite;
   }
+  
+  .animate-pulse-empty {
+    animation: pulse-empty 1.5s ease-in-out infinite;
+  }
+  
+  .animate-pulse-alert {
+    animation: pulse-alert 2s ease-in-out infinite;
+  }
 }
 
 @keyframes pulse-border {
@@ -40,5 +48,25 @@ html, body {
   }
   50% {
     border-color: rgb(59 130 246);
+  }
+}
+
+@keyframes pulse-empty {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes pulse-alert {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
   }
 }

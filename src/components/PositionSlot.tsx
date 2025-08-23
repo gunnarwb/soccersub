@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import { Player, Position, Match } from '../types'
 
 interface PositionSlotProps {
@@ -5,6 +6,7 @@ interface PositionSlotProps {
   player?: Player
   onPositionClick: () => void
   onPlayerClick?: () => void
+  onPlayerSubOut?: () => void
   selectedPlayerId: string | null
   currentMatch: Match | null
 }
@@ -14,9 +16,12 @@ export default function PositionSlot({
   player, 
   onPositionClick,
   onPlayerClick,
+  onPlayerSubOut,
   selectedPlayerId,
-  currentMatch: _currentMatch
+  currentMatch
 }: PositionSlotProps) {
+  const [showSubOutOption, setShowSubOutOption] = useState(false)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
 
   const getPositionColor = (role: Position['role']) => {
     switch (role) {
@@ -52,6 +57,41 @@ export default function PositionSlot({
   }
 
   const isTargeted = selectedPlayerId !== null && selectedPlayerId !== player?.id
+  const isEmpty = !player
+  const shouldPulsate = isEmpty && currentMatch?.isActive
+
+  const handleMouseDown = () => {
+    if (player && currentMatch?.isActive) {
+      longPressTimer.current = setTimeout(() => {
+        setShowSubOutOption(true)
+      }, 800) // 800ms long press
+    }
+  }
+
+  const handleMouseUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handleClick = () => {
+    if (showSubOutOption) {
+      setShowSubOutOption(false)
+      return
+    }
+    
+    if (player) {
+      onPlayerClick?.()
+    } else {
+      onPositionClick()
+    }
+  }
+
+  const handleSubOut = () => {
+    setShowSubOutOption(false)
+    onPlayerSubOut?.()
+  }
 
   return (
     <div
@@ -67,13 +107,21 @@ export default function PositionSlot({
           ${getPositionColor(position.role)}
           ${isTargeted ? 'ring-4 ring-blue-400 ring-opacity-70 scale-110' : ''}
           ${player?.id === selectedPlayerId ? 'ring-4 ring-yellow-400 ring-opacity-70 scale-110' : ''}
-          ${player ? 'hover:scale-105' : ''}
+          ${shouldPulsate ? 'animate-pulse-empty' : ''}
+          ${player ? 'hover:scale-105' : 'hover:ring-2 hover:ring-white hover:ring-opacity-50'}
         `}
-        onClick={player ? onPlayerClick : onPositionClick}
+        onClick={handleClick}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onTouchStart={handleMouseDown}
+        onTouchEnd={handleMouseUp}
         title={
           player 
-            ? `Click to ${selectedPlayerId ? 'swap with selected player' : 'select'} ${player.name}`
-            : `Click to assign selected player to ${position.name}`
+            ? `Click to ${selectedPlayerId ? 'swap with selected player' : 'select'} ${player.name}. Long press to sub out.`
+            : selectedPlayerId 
+              ? `Click to assign selected player to ${position.name}`
+              : `Empty ${position.name} position`
         }
       >
         {player ? (
@@ -90,7 +138,30 @@ export default function PositionSlot({
             {position.name}
           </span>
         )}
+        
+        {/* Sub out option popup */}
+        {showSubOutOption && player && (
+          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 z-50">
+            <div className="bg-red-500 text-white px-2 py-1 rounded text-xs whitespace-nowrap shadow-lg">
+              <button
+                onClick={handleSubOut}
+                className="hover:bg-red-600 px-1 py-0.5 rounded"
+              >
+                Sub Out
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+      
+      {/* Empty position alert */}
+      {isEmpty && currentMatch?.isActive && (
+        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 z-40">
+          <div className="bg-red-500 text-white px-2 py-1 rounded text-xs animate-pulse-alert">
+            Empty!
+          </div>
+        </div>
+      )}
     </div>
   )
 }

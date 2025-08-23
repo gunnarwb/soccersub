@@ -225,6 +225,76 @@ export default function FieldScreen({
     }
   }
 
+  const subPlayerOut = async (playerId: string) => {
+    const player = players.find(p => p.id === playerId)
+    if (!player || !player.position) return
+
+    const now = Date.now()
+    let updatedPlayer = { ...player }
+
+    // End position time tracking
+    if (player.positionTimeStart && currentMatch?.isActive) {
+      const positionTime = now - player.positionTimeStart
+      updatedPlayer.totalPositionTime += positionTime
+
+      // Log position time
+      await supabase.from('time_logs').insert({
+        player_id: playerId,
+        match_id: currentMatch.id,
+        start_time: player.positionTimeStart,
+        end_time: now,
+        position: player.position,
+        type: 'position'
+      })
+    }
+
+    // End field time tracking and sub out
+    if (player.fieldTimeStart && currentMatch?.isActive) {
+      const fieldTime = now - player.fieldTimeStart
+      updatedPlayer.totalFieldTime += fieldTime
+
+      // Log field time
+      await supabase.from('time_logs').insert({
+        player_id: playerId,
+        match_id: currentMatch.id,
+        start_time: player.fieldTimeStart,
+        end_time: now,
+        type: 'field'
+      })
+    }
+
+    // Remove from field and position
+    updatedPlayer.isOnField = false
+    updatedPlayer.fieldTimeStart = undefined
+    updatedPlayer.position = undefined
+    updatedPlayer.positionTimeStart = undefined
+
+    try {
+      await supabase
+        .from('players')
+        .update({
+          is_on_field: false,
+          field_time_start: null,
+          position: null,
+          position_time_start: null,
+          total_field_time: updatedPlayer.totalFieldTime,
+          total_position_time: updatedPlayer.totalPositionTime
+        })
+        .eq('id', playerId)
+
+      setPlayers(prev => 
+        prev.map(p => p.id === playerId ? updatedPlayer : p)
+      )
+
+      // Clear selection if this player was selected
+      if (selectedPlayerId === playerId) {
+        setSelectedPlayerId(null)
+      }
+    } catch (error) {
+      console.error('Error subbing player out:', error)
+    }
+  }
+
   const getPlayerInPosition = (positionName: string) => {
     return players.find(p => p.position === positionName)
   }
@@ -287,6 +357,7 @@ export default function FieldScreen({
               player={playerInPosition}
               onPositionClick={() => handlePositionClick(position.name)}
               onPlayerClick={playerInPosition ? () => handlePlayerClick(playerInPosition.id) : undefined}
+              onPlayerSubOut={playerInPosition ? () => subPlayerOut(playerInPosition.id) : undefined}
               selectedPlayerId={selectedPlayerId}
               currentMatch={currentMatch}
             />
