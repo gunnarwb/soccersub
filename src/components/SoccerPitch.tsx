@@ -36,17 +36,27 @@ export default function SoccerPitch({
     }),
   }))
 
-  const removePlayerFromPosition = async (playerId: string) => {
+  const removePlayerFromPosition = async (playerId: string, shouldSubOut: boolean = true) => {
     const player = players.find(p => p.id === playerId)
-    if (!player || !currentMatch?.isActive) return
+    if (!player) return
 
     const now = Date.now()
     let updatedPlayer = { ...player }
 
     // End position time tracking if player was in a position
-    if (player.position && player.positionTimeStart) {
+    if (player.position && player.positionTimeStart && currentMatch?.isActive) {
       const positionTime = now - player.positionTimeStart
       updatedPlayer.totalPositionTime += positionTime
+    }
+
+    // If shouldSubOut is true, remove them from field entirely
+    if (shouldSubOut) {
+      if (player.fieldTimeStart && currentMatch?.isActive) {
+        const fieldTime = now - player.fieldTimeStart
+        updatedPlayer.totalFieldTime += fieldTime
+      }
+      updatedPlayer.isOnField = false
+      updatedPlayer.fieldTimeStart = undefined
     }
 
     updatedPlayer.position = undefined
@@ -56,9 +66,12 @@ export default function SoccerPitch({
       await supabase
         .from('players')
         .update({
+          is_on_field: updatedPlayer.isOnField,
+          field_time_start: updatedPlayer.fieldTimeStart,
           position: null,
           position_time_start: null,
-          total_position_time: updatedPlayer.totalPositionTime
+          total_position_time: updatedPlayer.totalPositionTime,
+          total_field_time: updatedPlayer.totalFieldTime
         })
         .eq('id', playerId)
 
@@ -66,18 +79,34 @@ export default function SoccerPitch({
         prev.map(p => p.id === playerId ? updatedPlayer : p)
       )
 
-      // Log position time if there was one
-      if (player.position && player.positionTimeStart && currentMatch) {
-        await supabase
-          .from('time_logs')
-          .insert({
-            player_id: playerId,
-            match_id: currentMatch.id,
-            start_time: player.positionTimeStart,
-            end_time: now,
-            position: player.position,
-            type: 'position'
-          })
+      // Log times if match is active
+      if (currentMatch?.isActive) {
+        // Log position time if there was one
+        if (player.position && player.positionTimeStart) {
+          await supabase
+            .from('time_logs')
+            .insert({
+              player_id: playerId,
+              match_id: currentMatch.id,
+              start_time: player.positionTimeStart,
+              end_time: now,
+              position: player.position,
+              type: 'position'
+            })
+        }
+
+        // Log field time if being subbed out
+        if (shouldSubOut && player.fieldTimeStart) {
+          await supabase
+            .from('time_logs')
+            .insert({
+              player_id: playerId,
+              match_id: currentMatch.id,
+              start_time: player.fieldTimeStart,
+              end_time: now,
+              type: 'field'
+            })
+        }
       }
     } catch (error) {
       console.error('Error removing player from position:', error)
@@ -86,18 +115,24 @@ export default function SoccerPitch({
 
   const assignPlayerToPosition = async (playerId: string, positionName: string) => {
     const player = players.find(p => p.id === playerId)
-    if (!player || !currentMatch?.isActive) return
+    if (!player) return
 
     const now = Date.now()
     let updatedPlayer = { ...player }
+
+    // If player is not on field, this is a substitution (sub them in)
+    if (!player.isOnField) {
+      updatedPlayer.isOnField = true
+      updatedPlayer.fieldTimeStart = now
+    }
 
     // End previous position time if player was in a position
     if (player.position && player.positionTimeStart) {
       const positionTime = now - player.positionTimeStart
       updatedPlayer.totalPositionTime += positionTime
 
-      // Log the previous position time
-      if (currentMatch) {
+      // Log the previous position time if match is active
+      if (currentMatch?.isActive) {
         await supabase
           .from('time_logs')
           .insert({
@@ -113,14 +148,16 @@ export default function SoccerPitch({
 
     // Assign new position
     updatedPlayer.position = positionName
-    updatedPlayer.positionTimeStart = now
+    updatedPlayer.positionTimeStart = currentMatch?.isActive ? now : undefined
 
     try {
       await supabase
         .from('players')
         .update({
+          is_on_field: updatedPlayer.isOnField,
+          field_time_start: updatedPlayer.fieldTimeStart,
           position: positionName,
-          position_time_start: now,
+          position_time_start: updatedPlayer.positionTimeStart,
           total_position_time: updatedPlayer.totalPositionTime
         })
         .eq('id', playerId)
@@ -128,6 +165,19 @@ export default function SoccerPitch({
       setPlayers(prev => 
         prev.map(p => p.id === playerId ? updatedPlayer : p)
       )
+
+      // Log field time start if this was a substitution and match is active
+      if (!player.isOnField && currentMatch?.isActive) {
+        await supabase
+          .from('time_logs')
+          .insert({
+            player_id: playerId,
+            match_id: currentMatch.id,
+            start_time: now,
+            end_time: null,
+            type: 'field'
+          })
+      }
     } catch (error) {
       console.error('Error assigning player to position:', error)
     }
@@ -137,7 +187,9 @@ export default function SoccerPitch({
     return players.find(p => p.position === positionName)
   }
 
-  const unassignedOnFieldPlayers = players.filter(p => p.isOnField && !p.position)
+  const unassignedPlayers = currentMatch?.isActive 
+    ? players.filter(p => p.isOnField && !p.position)
+    : players.filter(p => !p.position)
 
   if (!formation) {
     return (
@@ -211,24 +263,26 @@ export default function SoccerPitch({
               position={position}
               player={playerInPosition}
               onPlayerAssigned={(playerId) => assignPlayerToPosition(playerId, position.name)}
-              disabled={!currentMatch?.isActive}
+              onPlayerRemoved={(playerId, shouldSubOut) => removePlayerFromPosition(playerId, shouldSubOut)}
+              currentMatch={currentMatch}
+              disabled={false}
             />
           )
         })}
       </div>
 
-      {/* Unassigned players on field */}
-      {unassignedOnFieldPlayers.length > 0 && (
+      {/* Unassigned players */}
+      {unassignedPlayers.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-gray-700">
-            Players on field (not positioned):
+            {currentMatch?.isActive ? 'Players on field (not positioned):' : 'Available players:'}
           </h3>
           <div className="flex flex-wrap gap-2">
-            {unassignedOnFieldPlayers.map(player => (
+            {unassignedPlayers.map(player => (
               <PlayerCard 
                 key={player.id} 
                 player={player} 
-                disabled={!currentMatch?.isActive}
+                disabled={false}
               />
             ))}
           </div>

@@ -1,11 +1,12 @@
 import { useDrop } from 'react-dnd'
-import { Player, Position } from '../types'
-import PlayerCard from './PlayerCard'
+import { Player, Position, Match } from '../types'
 
 interface PositionSlotProps {
   position: Position
   player?: Player
   onPlayerAssigned: (playerId: string) => void
+  onPlayerRemoved: (playerId: string, shouldSubOut: boolean) => void
+  currentMatch: Match | null
   disabled?: boolean
 }
 
@@ -13,6 +14,8 @@ export default function PositionSlot({
   position, 
   player, 
   onPlayerAssigned, 
+  onPlayerRemoved,
+  currentMatch,
   disabled = false 
 }: PositionSlotProps) {
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
@@ -45,6 +48,31 @@ export default function PositionSlot({
     }
   }
 
+  const formatTime = (ms: number) => {
+    const minutes = Math.floor(ms / 60000)
+    const seconds = Math.floor((ms % 60000) / 1000)
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  const getPlayerFieldTime = (player: Player) => {
+    let totalTime = player.totalFieldTime
+    if (player.isOnField && player.fieldTimeStart) {
+      totalTime += Date.now() - player.fieldTimeStart
+    }
+    return totalTime
+  }
+
+  const getFirstName = (fullName: string) => {
+    return fullName.split(' ')[0]
+  }
+
+  const handleDoubleClick = () => {
+    if (player && !disabled) {
+      // Double-click to remove from position (sub out if match is active)
+      onPlayerRemoved(player.id, currentMatch?.isActive || false)
+    }
+  }
+
   return (
     <div
       ref={drop}
@@ -56,19 +84,27 @@ export default function PositionSlot({
     >
       <div
         className={`
-          relative w-12 h-12 rounded-full border-2 flex items-center justify-center text-white font-bold text-xs shadow-lg transition-all
+          relative w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center text-white font-bold text-xs shadow-lg transition-all cursor-pointer
           ${getPositionColor(position.role)}
           ${isOver && canDrop ? 'ring-4 ring-white ring-opacity-50 scale-110' : ''}
           ${!canDrop && isOver ? 'opacity-50' : ''}
           ${disabled ? 'opacity-50' : ''}
+          ${player ? 'hover:scale-105' : ''}
         `}
+        onDoubleClick={handleDoubleClick}
+        title={player ? `Double-click to ${currentMatch?.isActive ? 'sub out' : 'remove'} ${player.name}` : `Drop player here for ${position.name}`}
       >
         {player ? (
-          <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-            <PlayerCard player={player} disabled={disabled} />
-          </div>
+          <>
+            <div className="text-[9px] leading-none text-center font-bold truncate max-w-full px-1">
+              {getFirstName(player.name)}
+            </div>
+            <div className="text-[7px] leading-none opacity-90">
+              {formatTime(getPlayerFieldTime(player))}
+            </div>
+          </>
         ) : (
-          <span className="text-[10px] leading-none text-center px-1">
+          <span className="text-[9px] leading-none text-center px-1">
             {position.name}
           </span>
         )}
