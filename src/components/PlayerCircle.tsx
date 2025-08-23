@@ -1,24 +1,20 @@
-import { useDrag } from 'react-dnd'
 import { Player, Match } from '../types'
 
 interface PlayerCircleProps {
   player: Player
   currentMatch: Match | null
   size?: 'small' | 'medium' | 'large'
+  isSelected?: boolean
+  onClick?: () => void
 }
 
 export default function PlayerCircle({ 
   player, 
   currentMatch, 
-  size = 'medium' 
+  size = 'medium',
+  isSelected = false,
+  onClick
 }: PlayerCircleProps) {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'player',
-    item: { playerId: player.id },
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
-    }),
-  }))
 
   const getFirstName = (fullName: string) => {
     return fullName.split(' ')[0]
@@ -52,19 +48,18 @@ export default function PlayerCircle({
   return (
     <div className="flex flex-col items-center space-y-1">
       <div
-        ref={drag}
         className={`
-          ${sizeClasses[size]} rounded-full border-2 flex flex-col items-center justify-center text-white font-bold shadow-lg cursor-grab transition-all touch-manipulation select-none
+          ${sizeClasses[size]} rounded-full border-2 flex flex-col items-center justify-center text-white font-bold shadow-lg cursor-pointer transition-all touch-manipulation select-none
           ${getPlayerStatusColor()}
-          ${isDragging ? 'opacity-50 scale-95 rotate-3' : 'hover:scale-105 active:scale-95'}
+          ${isSelected ? 'ring-4 ring-yellow-400 ring-opacity-70 scale-110' : 'hover:scale-105 active:scale-95'}
         `}
         style={{
-          cursor: isDragging ? 'grabbing' : 'grab',
           userSelect: 'none',
           WebkitUserSelect: 'none',
           touchAction: 'manipulation'
         }}
-        title={`Drag ${player.name} to field position`}
+        onClick={onClick}
+        title={`Click to ${isSelected ? 'deselect' : 'select'} ${player.name}`}
       >
         <div className="text-center leading-tight">
           {player.number && (

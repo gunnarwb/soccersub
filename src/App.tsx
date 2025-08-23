@@ -1,7 +1,4 @@
 import { useState, useEffect } from 'react'
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
-import { TouchBackend } from 'react-dnd-touch-backend'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import BottomNav, { TabType } from './components/BottomNav'
@@ -9,11 +6,6 @@ import PlayersScreen from './screens/PlayersScreen'
 import FieldScreen from './screens/FieldScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import { Player, Match, GameFormat } from './types'
-
-// Detect if we're on a touch device
-const isTouchDevice = () => {
-  return 'ontouchstart' in window || navigator.maxTouchPoints > 0
-}
 
 function App() {
   const [user, setUser] = useState<any>(null)
@@ -126,9 +118,6 @@ function App() {
     return <Auth />
   }
 
-  const dndBackend = isTouchDevice() ? TouchBackend : HTML5Backend
-  const dndOptions = isTouchDevice() ? { enableMouseEvents: true } : {}
-
   const renderActiveScreen = () => {
     switch (activeTab) {
       case 'players':
@@ -165,20 +154,18 @@ function App() {
   }
 
   return (
-    <DndProvider backend={dndBackend} options={dndOptions}>
-      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden">
-          {renderActiveScreen()}
-        </div>
-
-        {/* Bottom Navigation */}
-        <BottomNav 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {renderActiveScreen()}
       </div>
-    </DndProvider>
+
+      {/* Bottom Navigation */}
+      <BottomNav 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+    </div>
   )
 }
 

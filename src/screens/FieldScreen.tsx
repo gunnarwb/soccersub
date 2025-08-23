@@ -1,4 +1,4 @@
-import { useDrop } from 'react-dnd'
+import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Player, Match, GameFormat } from '../types'
 import { getFormationsByGameFormat } from '../utils/formations'
@@ -18,97 +18,108 @@ export default function FieldScreen({
   gameFormat, 
   currentMatch 
 }: FieldScreenProps) {
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
   const formations = getFormationsByGameFormat(gameFormat)
   const formation = formations[0] // Use first formation for now
 
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: 'player',
-    drop: (item: { playerId: string }, monitor) => {
-      if (!monitor.didDrop()) {
-        // Player dropped on empty field, remove from position
-        removePlayerFromPosition(item.playerId)
-      }
-    },
-    collect: (monitor) => ({
-      isOver: !!monitor.isOver() && !monitor.getDropResult(),
-    }),
-  }))
 
-  const removePlayerFromPosition = async (playerId: string, shouldSubOut: boolean = false) => {
-    const player = players.find(p => p.id === playerId)
-    if (!player) return
+  const swapPlayers = async (selectedPlayerId: string, targetPlayerId?: string, targetPosition?: string) => {
+    const selectedPlayer = players.find(p => p.id === selectedPlayerId)
+    if (!selectedPlayer) return
 
     const now = Date.now()
-    let updatedPlayer = { ...player }
+    let updatedPlayers = [...players]
 
-    // End position time tracking if player was in a position
-    if (player.position && player.positionTimeStart && currentMatch?.isActive) {
-      const positionTime = now - player.positionTimeStart
-      updatedPlayer.totalPositionTime += positionTime
-    }
+    if (targetPlayerId) {
+      // Swapping with another player (field-to-field swap)
+      const targetPlayer = players.find(p => p.id === targetPlayerId)
+      if (!targetPlayer) return
 
-    // If shouldSubOut is true, remove them from field entirely
-    if (shouldSubOut) {
-      if (player.fieldTimeStart && currentMatch?.isActive) {
-        const fieldTime = now - player.fieldTimeStart
-        updatedPlayer.totalFieldTime += fieldTime
-      }
-      updatedPlayer.isOnField = false
-      updatedPlayer.fieldTimeStart = undefined
-    }
+      // Store current positions
+      const selectedPlayerPosition = selectedPlayer.position
+      const targetPlayerPosition = targetPlayer.position
 
-    updatedPlayer.position = undefined
-    updatedPlayer.positionTimeStart = undefined
-
-    try {
-      await supabase
-        .from('players')
-        .update({
-          is_on_field: updatedPlayer.isOnField,
-          field_time_start: updatedPlayer.fieldTimeStart,
-          position: null,
-          position_time_start: null,
-          total_position_time: updatedPlayer.totalPositionTime,
-          total_field_time: updatedPlayer.totalFieldTime
-        })
-        .eq('id', playerId)
-
-      setPlayers(prev => 
-        prev.map(p => p.id === playerId ? updatedPlayer : p)
-      )
-
-      // Log times if match is active
+      // End timing for both players' current positions if match is active
       if (currentMatch?.isActive) {
-        // Log position time if there was one
-        if (player.position && player.positionTimeStart) {
-          await supabase
-            .from('time_logs')
-            .insert({
-              player_id: playerId,
-              match_id: currentMatch.id,
-              start_time: player.positionTimeStart,
-              end_time: now,
-              position: player.position,
-              type: 'position'
-            })
+        if (selectedPlayer.positionTimeStart && selectedPlayer.position) {
+          const positionTime = now - selectedPlayer.positionTimeStart
+          updatedPlayers = updatedPlayers.map(p => 
+            p.id === selectedPlayerId 
+              ? { ...p, totalPositionTime: p.totalPositionTime + positionTime }
+              : p
+          )
+
+          await supabase.from('time_logs').insert({
+            player_id: selectedPlayerId,
+            match_id: currentMatch.id,
+            start_time: selectedPlayer.positionTimeStart,
+            end_time: now,
+            position: selectedPlayer.position,
+            type: 'position'
+          })
         }
 
-        // Log field time if being subbed out
-        if (shouldSubOut && player.fieldTimeStart) {
-          await supabase
-            .from('time_logs')
-            .insert({
-              player_id: playerId,
-              match_id: currentMatch.id,
-              start_time: player.fieldTimeStart,
-              end_time: now,
-              type: 'field'
-            })
+        if (targetPlayer.positionTimeStart && targetPlayer.position) {
+          const positionTime = now - targetPlayer.positionTimeStart
+          updatedPlayers = updatedPlayers.map(p => 
+            p.id === targetPlayerId 
+              ? { ...p, totalPositionTime: p.totalPositionTime + positionTime }
+              : p
+          )
+
+          await supabase.from('time_logs').insert({
+            player_id: targetPlayerId,
+            match_id: currentMatch.id,
+            start_time: targetPlayer.positionTimeStart,
+            end_time: now,
+            position: targetPlayer.position,
+            type: 'position'
+          })
         }
       }
-    } catch (error) {
-      console.error('Error removing player from position:', error)
+
+      // Swap positions
+      updatedPlayers = updatedPlayers.map(p => {
+        if (p.id === selectedPlayerId) {
+          return {
+            ...p,
+            position: targetPlayerPosition,
+            positionTimeStart: currentMatch?.isActive ? now : undefined
+          }
+        }
+        if (p.id === targetPlayerId) {
+          return {
+            ...p,
+            position: selectedPlayerPosition,
+            positionTimeStart: currentMatch?.isActive ? now : undefined
+          }
+        }
+        return p
+      })
+
+      // Update database for both players
+      await Promise.all([
+        supabase.from('players').update({
+          position: targetPlayerPosition,
+          position_time_start: currentMatch?.isActive ? now : null,
+          total_position_time: updatedPlayers.find(p => p.id === selectedPlayerId)?.totalPositionTime
+        }).eq('id', selectedPlayerId),
+        
+        supabase.from('players').update({
+          position: selectedPlayerPosition,
+          position_time_start: currentMatch?.isActive ? now : null,
+          total_position_time: updatedPlayers.find(p => p.id === targetPlayerId)?.totalPositionTime
+        }).eq('id', targetPlayerId)
+      ])
+
+    } else if (targetPosition) {
+      // Assigning to a specific position (bench-to-field or empty position)
+      await assignPlayerToPosition(selectedPlayerId, targetPosition)
+      return
     }
+
+    setPlayers(updatedPlayers)
+    setSelectedPlayerId(null) // Clear selection
   }
 
   const assignPlayerToPosition = async (playerId: string, positionName: string) => {
@@ -181,6 +192,40 @@ export default function FieldScreen({
     }
   }
 
+  const handlePositionClick = async (positionName: string) => {
+    if (!selectedPlayerId) return
+
+    const playerInPosition = players.find(p => p.position === positionName)
+    
+    if (playerInPosition) {
+      // Swap with the player currently in this position
+      await swapPlayers(selectedPlayerId, playerInPosition.id)
+    } else {
+      // Assign to empty position
+      await swapPlayers(selectedPlayerId, undefined, positionName)
+    }
+  }
+
+  const handlePlayerClick = (playerId: string) => {
+    if (selectedPlayerId === playerId) {
+      // Deselect if clicking the same player
+      setSelectedPlayerId(null)
+    } else if (selectedPlayerId) {
+      // Swap players if another player is selected
+      const targetPlayer = players.find(p => p.id === playerId)
+      if (targetPlayer?.position) {
+        // Target is positioned on field - swap positions
+        swapPlayers(selectedPlayerId, playerId)
+      } else {
+        // Target is on bench - just select them instead
+        setSelectedPlayerId(playerId)
+      }
+    } else {
+      // Select this player
+      setSelectedPlayerId(playerId)
+    }
+  }
+
   const getPlayerInPosition = (positionName: string) => {
     return players.find(p => p.position === positionName)
   }
@@ -200,7 +245,6 @@ export default function FieldScreen({
     <div className="h-full flex flex-col bg-gray-900">
       {/* Full Screen Soccer Field */}
       <div 
-        ref={drop}
         className="flex-1 relative bg-gradient-to-b from-pitch-light to-pitch-dark"
         style={{
           backgroundImage: `
@@ -242,30 +286,28 @@ export default function FieldScreen({
               key={position.id}
               position={position}
               player={playerInPosition}
-              onPlayerAssigned={(playerId) => assignPlayerToPosition(playerId, position.name)}
-              onPlayerRemoved={(playerId, shouldSubOut) => removePlayerFromPosition(playerId, shouldSubOut)}
+              onPositionClick={() => handlePositionClick(position.name)}
+              onPlayerClick={playerInPosition ? () => handlePlayerClick(playerInPosition.id) : undefined}
+              selectedPlayerId={selectedPlayerId}
               currentMatch={currentMatch}
-              disabled={false}
             />
           )
         })}
-
-        {/* Drop feedback overlay */}
-        {isOver && (
-          <div className="absolute inset-0 bg-blue-500 bg-opacity-20 border-4 border-dashed border-blue-400 flex items-center justify-center">
-            <div className="text-white text-xl font-bold bg-blue-500 bg-opacity-80 px-4 py-2 rounded-lg">
-              Drop to remove from position
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Bottom Player Panel - The Bench */}
       <div className="bg-white border-t-2 border-gray-200 p-4" style={{ height: '33vh' }}>
         <div className="h-full flex flex-col">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">
-            The Bench ({benchPlayers.length} players)
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">
+              The Bench ({benchPlayers.length} players)
+            </h3>
+            {selectedPlayerId && (
+              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                {players.find(p => p.id === selectedPlayerId)?.name} selected
+              </div>
+            )}
+          </div>
           
           {benchPlayers.length === 0 ? (
             <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -279,6 +321,8 @@ export default function FieldScreen({
                     key={player.id} 
                     player={player} 
                     currentMatch={currentMatch}
+                    isSelected={selectedPlayerId === player.id}
+                    onClick={() => handlePlayerClick(player.id)}
                   />
                 ))}
               </div>

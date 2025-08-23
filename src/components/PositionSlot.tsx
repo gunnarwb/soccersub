@@ -1,37 +1,22 @@
-import { useDrop } from 'react-dnd'
 import { Player, Position, Match } from '../types'
 
 interface PositionSlotProps {
   position: Position
   player?: Player
-  onPlayerAssigned: (playerId: string) => void
-  onPlayerRemoved: (playerId: string, shouldSubOut: boolean) => void
+  onPositionClick: () => void
+  onPlayerClick?: () => void
+  selectedPlayerId: string | null
   currentMatch: Match | null
-  disabled?: boolean
 }
 
 export default function PositionSlot({ 
   position, 
   player, 
-  onPlayerAssigned, 
-  onPlayerRemoved,
-  currentMatch,
-  disabled = false 
+  onPositionClick,
+  onPlayerClick,
+  selectedPlayerId,
+  currentMatch: _currentMatch
 }: PositionSlotProps) {
-  const [{ isOver, canDrop }, drop] = useDrop(() => ({
-    accept: 'player',
-    drop: (item: { playerId: string }) => {
-      if (!disabled) {
-        onPlayerAssigned(item.playerId)
-      }
-      return { position: position.name }
-    },
-    canDrop: () => !disabled,
-    collect: (monitor) => ({
-      isOver: !!monitor.isOver(),
-      canDrop: !!monitor.canDrop(),
-    }),
-  }))
 
   const getPositionColor = (role: Position['role']) => {
     switch (role) {
@@ -66,16 +51,10 @@ export default function PositionSlot({
     return fullName.split(' ')[0]
   }
 
-  const handleDoubleClick = () => {
-    if (player && !disabled) {
-      // Double-click to remove from position (sub out if match is active)
-      onPlayerRemoved(player.id, currentMatch?.isActive || false)
-    }
-  }
+  const isTargeted = selectedPlayerId !== null && selectedPlayerId !== player?.id
 
   return (
     <div
-      ref={drop}
       className="absolute transform -translate-x-1/2 -translate-y-1/2"
       style={{
         left: `${position.x}%`,
@@ -86,13 +65,16 @@ export default function PositionSlot({
         className={`
           relative w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center text-white font-bold text-xs shadow-lg transition-all cursor-pointer
           ${getPositionColor(position.role)}
-          ${isOver && canDrop ? 'ring-4 ring-white ring-opacity-50 scale-110' : ''}
-          ${!canDrop && isOver ? 'opacity-50' : ''}
-          ${disabled ? 'opacity-50' : ''}
+          ${isTargeted ? 'ring-4 ring-blue-400 ring-opacity-70 scale-110' : ''}
+          ${player?.id === selectedPlayerId ? 'ring-4 ring-yellow-400 ring-opacity-70 scale-110' : ''}
           ${player ? 'hover:scale-105' : ''}
         `}
-        onDoubleClick={handleDoubleClick}
-        title={player ? `Double-click to ${currentMatch?.isActive ? 'sub out' : 'remove'} ${player.name}` : `Drop player here for ${position.name}`}
+        onClick={player ? onPlayerClick : onPositionClick}
+        title={
+          player 
+            ? `Click to ${selectedPlayerId ? 'swap with selected player' : 'select'} ${player.name}`
+            : `Click to assign selected player to ${position.name}`
+        }
       >
         {player ? (
           <>
