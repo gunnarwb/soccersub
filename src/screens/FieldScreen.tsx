@@ -377,7 +377,7 @@ export default function FieldScreen({
             ? 'hover:bg-red-50 border-red-200' 
             : ''
         }`}
-        style={{ height: '33vh' }}
+        style={{ height: '40vh' }}
         onClick={() => {
           if (selectedPlayerId) {
             const selectedPlayer = players.find(p => p.id === selectedPlayerId)
@@ -416,7 +416,7 @@ export default function FieldScreen({
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-4">
                 {benchPlayers.map(player => (
                   <PlayerCircle 
                     key={player.id} 
@@ -424,6 +424,7 @@ export default function FieldScreen({
                     currentMatch={currentMatch}
                     isSelected={selectedPlayerId === player.id}
                     onClick={() => handlePlayerClick(player.id)}
+                    size="medium"
                   />
                 ))}
               </div>
