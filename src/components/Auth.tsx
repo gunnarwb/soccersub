@@ -22,6 +22,11 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: typeof window !== 'undefined' 
+              ? window.location.origin 
+              : 'https://soccersub.com'
+          }
         })
         if (error) throw error
         setMessage('Check your email for the confirmation link!')
