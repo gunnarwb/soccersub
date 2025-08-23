@@ -10,7 +10,12 @@ html, body {
 }
 
 #root {
-  min-height: 100vh;
+  height: 100vh;
+}
+
+/* Safe area for mobile devices */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @layer base {

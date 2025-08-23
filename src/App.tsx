@@ -3,12 +3,12 @@ import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { TouchBackend } from 'react-dnd-touch-backend'
 import { supabase } from './lib/supabase'
-import PlayerManager from './components/PlayerManager'
-import SoccerPitch from './components/SoccerPitch'
-import MatchControls from './components/MatchControls'
 import Auth from './components/Auth'
+import BottomNav, { TabType } from './components/BottomNav'
+import PlayersScreen from './screens/PlayersScreen'
+import FieldScreen from './screens/FieldScreen'
+import SettingsScreen from './screens/SettingsScreen'
 import { Player, Match, GameFormat } from './types'
-
 
 // Detect if we're on a touch device
 const isTouchDevice = () => {
@@ -21,6 +21,7 @@ function App() {
   const [players, setPlayers] = useState<Player[]>([])
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null)
   const [gameFormat, setGameFormat] = useState<GameFormat>('11v11')
+  const [activeTab, setActiveTab] = useState<TabType>('field')
 
   useEffect(() => {
     // Check initial session
@@ -128,63 +129,54 @@ function App() {
   const dndBackend = isTouchDevice() ? TouchBackend : HTML5Backend
   const dndOptions = isTouchDevice() ? { enableMouseEvents: true } : {}
 
-  return (
-    <DndProvider backend={dndBackend} options={dndOptions}>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm border-b">
-          <div className="px-4 py-3 flex justify-between items-center">
-            <h1 className="text-xl font-bold text-gray-900">SoccerSub</h1>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="text-sm text-gray-600 hover:text-gray-800"
-            >
-              Sign Out
-            </button>
-          </div>
-        </header>
-
-        <main className="p-4 space-y-6 max-w-6xl mx-auto">
-          <MatchControls 
+  const renderActiveScreen = () => {
+    switch (activeTab) {
+      case 'players':
+        return (
+          <PlayersScreen 
+            players={players}
+            setPlayers={setPlayers}
+            currentMatch={currentMatch}
+          />
+        )
+      case 'field':
+        return (
+          <FieldScreen 
+            players={players}
+            setPlayers={setPlayers}
+            gameFormat={gameFormat}
+            currentMatch={currentMatch}
+          />
+        )
+      case 'settings':
+        return (
+          <SettingsScreen 
             currentMatch={currentMatch}
             setCurrentMatch={setCurrentMatch}
             players={players}
             setPlayers={setPlayers}
+            gameFormat={gameFormat}
+            setGameFormat={setGameFormat}
           />
-          
-          <div className="space-y-6 md:space-y-0 md:grid md:grid-cols-1 lg:grid-cols-3 md:gap-6">
-            <div className="order-2 lg:order-1 lg:col-span-1">
-              <PlayerManager 
-                players={players}
-                setPlayers={setPlayers}
-                currentMatch={currentMatch}
-              />
-            </div>
-            
-            <div className="order-1 lg:order-2 lg:col-span-2">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Game Format
-                </label>
-                <select
-                  value={gameFormat}
-                  onChange={(e) => setGameFormat(e.target.value as GameFormat)}
-                  className="w-full md:w-auto border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="7v7">7v7</option>
-                  <option value="9v9">9v9</option>
-                  <option value="11v11">11v11</option>
-                </select>
-              </div>
-              
-              <SoccerPitch 
-                players={players}
-                setPlayers={setPlayers}
-                gameFormat={gameFormat}
-                currentMatch={currentMatch}
-              />
-            </div>
-          </div>
-        </main>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <DndProvider backend={dndBackend} options={dndOptions}>
+      <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-hidden">
+          {renderActiveScreen()}
+        </div>
+
+        {/* Bottom Navigation */}
+        <BottomNav 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
       </div>
     </DndProvider>
   )
