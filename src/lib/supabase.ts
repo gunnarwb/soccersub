@@ -7,7 +7,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    redirectTo: typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'https://soccersub.com'
+  }
+})
 
 export type Database = {
   public: {
