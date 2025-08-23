@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase'
 import { GameFormat, Match, Player } from '../types'
 import MatchControls from '../components/MatchControls'
-import { Settings, Users, Clock, LogOut } from 'lucide-react'
+import { Settings, Users, Clock, LogOut, RefreshCw } from 'lucide-react'
 
 interface SettingsScreenProps {
   currentMatch: Match | null
@@ -32,6 +32,44 @@ export default function SettingsScreen({
       await supabase.auth.signOut()
     } catch (error) {
       console.error('Error signing out:', error)
+    }
+  }
+
+  const refreshPlayerData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name')
+
+      if (error) {
+        console.error('Error refreshing player data:', error)
+        return
+      }
+
+      const mappedPlayers: Player[] = data.map(p => ({
+        id: p.id,
+        name: p.name,
+        number: p.number,
+        isOnField: p.is_on_field,
+        position: p.position,
+        fieldTimeStart: p.field_time_start,
+        totalFieldTime: p.total_field_time,
+        positionTimeStart: p.position_time_start,
+        totalPositionTime: p.total_position_time,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at
+      }))
+
+      setPlayers(mappedPlayers)
+      alert('Player data refreshed from database')
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+      alert('Error refreshing data')
     }
   }
 
@@ -133,8 +171,25 @@ export default function SettingsScreen({
                 <div className="text-2xl font-bold text-gray-600">
                   {players.filter(p => !p.isOnField).length}
                 </div>
-                <div className="text-sm text-gray-600">On Bench</div>
+                <div className="text-sm text-gray-600">Off Field</div>
               </div>
+            </div>
+            
+            {/* Debug info */}
+            <div className="mt-4 p-3 bg-gray-50 rounded text-xs">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-medium text-gray-700">Debug Info:</div>
+                <button
+                  onClick={refreshPlayerData}
+                  className="flex items-center space-x-1 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  <span>Refresh</span>
+                </button>
+              </div>
+              <div>Players on field: {players.filter(p => p.isOnField).map(p => p.name).join(', ') || 'None'}</div>
+              <div className="mt-1">Players off field: {players.filter(p => !p.isOnField).map(p => p.name).join(', ') || 'None'}</div>
+              <div className="mt-1">Players with positions: {players.filter(p => p.position).map(p => `${p.name}(${p.position})`).join(', ') || 'None'}</div>
             </div>
           </div>
         </div>
