@@ -43,10 +43,23 @@ CREATE TABLE IF NOT EXISTS public.time_logs (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Create goal_events table
+CREATE TABLE IF NOT EXISTS public.goal_events (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  match_id uuid REFERENCES public.matches(id) ON DELETE CASCADE NOT NULL,
+  scorer_id uuid REFERENCES public.players(id) ON DELETE SET NULL,
+  assist_id uuid REFERENCES public.players(id) ON DELETE SET NULL,
+  is_own_goal boolean DEFAULT false,
+  minute integer NOT NULL,
+  timestamp bigint NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Enable Row Level Security
 ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.time_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.goal_events ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for players
 DROP POLICY IF EXISTS "Users can manage own players" ON public.players;
@@ -69,11 +82,25 @@ CREATE POLICY "Users can manage own time logs" ON public.time_logs
     )
   );
 
+-- Create policies for goal_events
+DROP POLICY IF EXISTS "Users can manage own goal events" ON public.goal_events;
+CREATE POLICY "Users can manage own goal events" ON public.goal_events
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.matches m 
+      WHERE m.id = goal_events.match_id 
+      AND m.user_id = auth.uid()
+    )
+  );
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS players_user_id_idx ON public.players(user_id);
 CREATE INDEX IF NOT EXISTS matches_user_id_idx ON public.matches(user_id);
 CREATE INDEX IF NOT EXISTS time_logs_player_id_idx ON public.time_logs(player_id);
 CREATE INDEX IF NOT EXISTS time_logs_match_id_idx ON public.time_logs(match_id);
+CREATE INDEX IF NOT EXISTS goal_events_match_id_idx ON public.goal_events(match_id);
+CREATE INDEX IF NOT EXISTS goal_events_scorer_id_idx ON public.goal_events(scorer_id);
+CREATE INDEX IF NOT EXISTS goal_events_assist_id_idx ON public.goal_events(assist_id);
 
 -- Create function for updating timestamps
 CREATE OR REPLACE FUNCTION public.handle_updated_at()

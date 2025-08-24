@@ -26,11 +26,12 @@ export default function PlayerCircle({
   }
 
   const getPlayerFieldTime = (player: Player) => {
-    let totalTime = player.totalFieldTime
+    // Show only current match time, not total career time
+    let currentMatchTime = player.currentMatchFieldTime || 0
     if (player.isOnField && player.fieldTimeStart) {
-      totalTime += Date.now() - player.fieldTimeStart
+      currentMatchTime += Date.now() - player.fieldTimeStart
     }
-    return totalTime
+    return currentMatchTime
   }
 
   const sizeClasses = {

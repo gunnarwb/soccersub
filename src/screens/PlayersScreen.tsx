@@ -51,6 +51,8 @@ export default function PlayersScreen({ players, setPlayers, currentMatch }: Pla
         totalFieldTime: data.total_field_time,
         positionTimeStart: data.position_time_start,
         totalPositionTime: data.total_position_time,
+        currentMatchFieldTime: 0,
+        currentMatchPositionTime: 0,
         createdAt: data.created_at,
         updatedAt: data.updated_at
       }

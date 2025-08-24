@@ -61,6 +61,8 @@ export default function SettingsScreen({
         totalFieldTime: p.total_field_time,
         positionTimeStart: p.position_time_start,
         totalPositionTime: p.total_position_time,
+        currentMatchFieldTime: 0,
+        currentMatchPositionTime: 0,
         createdAt: p.created_at,
         updatedAt: p.updated_at
       }))

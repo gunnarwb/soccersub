@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Player, Match } from '../types'
+import { Player, Match, GoalEvent } from '../types'
 import { getFormationById } from '../utils/formations'
 import { useSettings } from '../contexts/SettingsContext'
 import PositionSlot from '../components/PositionSlot'
 import PlayerCircle from '../components/PlayerCircle'
+import ScoreDisplay from '../components/ScoreDisplay'
 
 interface FieldScreenProps {
   players: Player[]
@@ -19,7 +20,44 @@ export default function FieldScreen({
 }: FieldScreenProps) {
   const { settings } = useSettings()
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
+  const [goals, setGoals] = useState<GoalEvent[]>([])
   const formation = getFormationById(settings.selectedFormationId)
+
+  // Load goals for current match
+  useEffect(() => {
+    if (currentMatch) {
+      loadGoals()
+    }
+  }, [currentMatch])
+
+  const loadGoals = async () => {
+    if (!currentMatch) return
+
+    try {
+      const { data, error } = await supabase
+        .from('goal_events')
+        .select('*')
+        .eq('match_id', currentMatch.id)
+        .order('timestamp')
+
+      if (error) throw error
+
+      const mappedGoals: GoalEvent[] = data.map(g => ({
+        id: g.id,
+        matchId: g.match_id,
+        scorerId: g.scorer_id,
+        assistId: g.assist_id,
+        isOwnGoal: g.is_own_goal,
+        minute: g.minute,
+        timestamp: g.timestamp,
+        createdAt: g.created_at
+      }))
+
+      setGoals(mappedGoals)
+    } catch (error) {
+      console.error('Error loading goals:', error)
+    }
+  }
 
 
   const swapPlayers = async (selectedPlayerId: string, targetPlayerId?: string, targetPosition?: string) => {
@@ -377,6 +415,14 @@ export default function FieldScreen({
           <div className="absolute bottom-0 right-0 w-8 h-8 border-l-4 border-t-4 border-white rounded-tl-full opacity-60"></div>
         </div>
 
+        {/* Score Display */}
+        <ScoreDisplay 
+          currentMatch={currentMatch}
+          players={players}
+          goals={goals}
+          setGoals={setGoals}
+        />
+
         {/* Position slots */}
         {formation.positions.map((position) => {
           const playerInPosition = getPlayerInPosition(position.name)
@@ -402,7 +448,7 @@ export default function FieldScreen({
             ? 'hover:bg-red-50 border-red-200' 
             : ''
         }`}
-        style={{ height: '40vh' }}
+        style={{ height: '50vh' }}
         onClick={() => {
           if (selectedPlayerId) {
             const selectedPlayer = players.find(p => p.id === selectedPlayerId)

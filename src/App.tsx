@@ -65,6 +65,8 @@ function App() {
       totalFieldTime: p.total_field_time,
       positionTimeStart: p.position_time_start,
       totalPositionTime: p.total_position_time,
+      currentMatchFieldTime: 0, // Reset for each match
+      currentMatchPositionTime: 0, // Reset for each match
       createdAt: p.created_at,
       updatedAt: p.updated_at
     }))

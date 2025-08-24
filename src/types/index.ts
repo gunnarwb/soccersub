@@ -8,6 +8,8 @@ export interface Player {
   totalFieldTime: number
   positionTimeStart?: number
   totalPositionTime: number
+  currentMatchFieldTime: number // Time played in current match only
+  currentMatchPositionTime: number // Position time in current match only
   createdAt: string
   updatedAt: string
 }
@@ -51,6 +53,32 @@ export interface TimeLog {
   position?: string
   type: 'field' | 'position'
   createdAt: string
+}
+
+export interface GoalEvent {
+  id: string
+  matchId: string
+  scorerId?: string
+  assistId?: string
+  isOwnGoal: boolean
+  minute: number
+  timestamp: number
+  createdAt: string
+}
+
+export interface MatchReport {
+  match: Match
+  playerStats: PlayerMatchStats[]
+  goals: GoalEvent[]
+  totalPlayingTime: number
+}
+
+export interface PlayerMatchStats {
+  player: Player
+  fieldTime: number
+  positionTime: number
+  goals: number
+  assists: number
 }
 
 export type GameFormat = '7v7' | '9v9' | '11v11'
