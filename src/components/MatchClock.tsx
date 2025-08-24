@@ -16,7 +16,7 @@ export default function MatchClock({ currentMatch }: MatchClockProps) {
     if (currentMatch?.isActive && currentMatch.startTime) {
       interval = setInterval(() => {
         const now = Date.now()
-        const elapsed = now - currentMatch.startTime
+        const elapsed = now - (currentMatch.startTime || 0)
         
         // Account for halftime if it happened
         let adjustedElapsed = elapsed
@@ -26,7 +26,7 @@ export default function MatchClock({ currentMatch }: MatchClockProps) {
           setIsHalfTime(false)
         } else if (currentMatch.halfTimeStart) {
           // Currently in halftime
-          adjustedElapsed = currentMatch.halfTimeStart - currentMatch.startTime
+          adjustedElapsed = currentMatch.halfTimeStart - (currentMatch.startTime || 0)
           setIsHalfTime(true)
         } else {
           setIsHalfTime(false)
