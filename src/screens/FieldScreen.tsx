@@ -83,7 +83,11 @@ export default function FieldScreen({
           const positionTime = now - selectedPlayer.positionTimeStart
           updatedPlayers = updatedPlayers.map(p => 
             p.id === selectedPlayerId 
-              ? { ...p, totalPositionTime: p.totalPositionTime + positionTime }
+              ? { 
+                  ...p, 
+                  currentMatchPositionTime: p.currentMatchPositionTime + positionTime,
+                  totalPositionTime: p.totalPositionTime + positionTime 
+                }
               : p
           )
 
@@ -101,7 +105,11 @@ export default function FieldScreen({
           const positionTime = now - targetPlayer.positionTimeStart
           updatedPlayers = updatedPlayers.map(p => 
             p.id === targetPlayerId 
-              ? { ...p, totalPositionTime: p.totalPositionTime + positionTime }
+              ? { 
+                  ...p, 
+                  currentMatchPositionTime: p.currentMatchPositionTime + positionTime,
+                  totalPositionTime: p.totalPositionTime + positionTime 
+                }
               : p
           )
 
@@ -178,7 +186,8 @@ export default function FieldScreen({
     // End previous position time if player was in a position
     if (player.position && player.positionTimeStart) {
       const positionTime = now - player.positionTimeStart
-      updatedPlayer.totalPositionTime += positionTime
+      updatedPlayer.currentMatchPositionTime += positionTime
+      updatedPlayer.totalPositionTime += positionTime // Also update career total
 
       // Log the previous position time if match is active
       if (currentMatch?.isActive) {
@@ -295,7 +304,8 @@ export default function FieldScreen({
     // End field time tracking and sub out
     if (player.fieldTimeStart && currentMatch?.isActive) {
       const fieldTime = now - player.fieldTimeStart
-      updatedPlayer.totalFieldTime += fieldTime
+      updatedPlayer.currentMatchFieldTime += fieldTime
+      updatedPlayer.totalFieldTime += fieldTime // Also update career total
 
       // Log field time
       await supabase.from('time_logs').insert({

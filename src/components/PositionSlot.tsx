@@ -45,11 +45,12 @@ export default function PositionSlot({
   }
 
   const getPlayerFieldTime = (player: Player) => {
-    let totalTime = player.totalFieldTime
+    // Show current match time only
+    let currentTime = player.currentMatchFieldTime
     if (player.isOnField && player.fieldTimeStart) {
-      totalTime += Date.now() - player.fieldTimeStart
+      currentTime += Date.now() - player.fieldTimeStart
     }
-    return totalTime
+    return currentTime
   }
 
   const getFirstName = (fullName: string) => {

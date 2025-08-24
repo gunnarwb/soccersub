@@ -82,6 +82,7 @@ export default function PlayerManager({ players, setPlayers, currentMatch }: Pla
       // Player is going OFF the field
       if (player.fieldTimeStart) {
         const sessionTime = now - player.fieldTimeStart
+        updatedPlayer.currentMatchFieldTime += sessionTime
         updatedPlayer.totalFieldTime += sessionTime
       }
       updatedPlayer.isOnField = false
@@ -136,11 +137,12 @@ export default function PlayerManager({ players, setPlayers, currentMatch }: Pla
   }
 
   const getPlayerFieldTime = (player: Player) => {
-    let totalTime = player.totalFieldTime
+    // Show current match time only
+    let currentTime = player.currentMatchFieldTime
     if (player.isOnField && player.fieldTimeStart) {
-      totalTime += Date.now() - player.fieldTimeStart
+      currentTime += Date.now() - player.fieldTimeStart
     }
-    return totalTime
+    return currentTime
   }
 
   const onFieldPlayers = players.filter(p => p.isOnField)
@@ -278,7 +280,7 @@ export default function PlayerManager({ players, setPlayers, currentMatch }: Pla
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center text-xs text-gray-600">
                       <Clock className="h-3 w-3 mr-1" />
-                      {formatTime(player.totalFieldTime)}
+                      {formatTime(player.currentMatchFieldTime)}
                     </div>
                     <button
                       onClick={() => toggleFieldStatus(player.id)}

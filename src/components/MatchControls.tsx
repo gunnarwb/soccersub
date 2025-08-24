@@ -100,6 +100,18 @@ export default function MatchControls({
 
       setCurrentMatch(newMatch)
       setMatchTime(0)
+      
+      // Reset all players' current match times
+      setPlayers(prev => prev.map(player => ({
+        ...player,
+        currentMatchFieldTime: 0,
+        currentMatchPositionTime: 0,
+        isOnField: false,
+        position: undefined,
+        fieldTimeStart: undefined,
+        positionTimeStart: undefined
+      })))
+      
     } catch (error: any) {
       console.error('Error starting match:', error)
       alert(`Error starting match: ${error.message}`)
