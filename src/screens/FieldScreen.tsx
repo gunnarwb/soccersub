@@ -6,6 +6,7 @@ import { useSettings } from '../contexts/SettingsContext'
 import PositionSlot from '../components/PositionSlot'
 import PlayerCircle from '../components/PlayerCircle'
 import ScoreDisplay from '../components/ScoreDisplay'
+import MatchClock from '../components/MatchClock'
 
 interface FieldScreenProps {
   players: Player[]
@@ -358,6 +359,29 @@ export default function FieldScreen({
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
+      {/* Top Header with Score and Clock */}
+      <div className="bg-gray-900 border-b border-gray-700 p-3">
+        <div className="flex items-center justify-between">
+          {/* Left side - empty for now */}
+          <div className="w-20"></div>
+          
+          {/* Center - Score */}
+          <div className="flex-1 flex justify-center">
+            <ScoreDisplay 
+              currentMatch={currentMatch}
+              players={players}
+              goals={goals}
+              setGoals={setGoals}
+            />
+          </div>
+          
+          {/* Right side - Match Clock */}
+          <div className="w-20 flex justify-end">
+            {currentMatch?.isActive && <MatchClock currentMatch={currentMatch} />}
+          </div>
+        </div>
+      </div>
+
       {/* On-field but unpositioned players */}
       {onFieldUnpositioned.length > 0 && (
         <div className="bg-blue-500 bg-opacity-90 p-2">
@@ -380,7 +404,7 @@ export default function FieldScreen({
         </div>
       )}
 
-      {/* Full Screen Soccer Field */}
+      {/* Soccer Field */}
       <div 
         className="flex-1 relative bg-gradient-to-b from-pitch-light to-pitch-dark"
         style={{
@@ -414,14 +438,6 @@ export default function FieldScreen({
           <div className="absolute bottom-0 left-0 w-8 h-8 border-r-4 border-t-4 border-white rounded-tr-full opacity-60"></div>
           <div className="absolute bottom-0 right-0 w-8 h-8 border-l-4 border-t-4 border-white rounded-tl-full opacity-60"></div>
         </div>
-
-        {/* Score Display */}
-        <ScoreDisplay 
-          currentMatch={currentMatch}
-          players={players}
-          goals={goals}
-          setGoals={setGoals}
-        />
 
         {/* Position slots */}
         {formation.positions.map((position) => {

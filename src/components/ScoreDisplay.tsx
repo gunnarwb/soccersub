@@ -79,19 +79,24 @@ export default function ScoreDisplay({ currentMatch, players, goals, setGoals }:
   }
 
   if (!currentMatch?.isActive) {
-    return null
+    return (
+      <div className="text-white text-center">
+        <div className="text-lg font-bold">0 - 0</div>
+        <div className="text-xs opacity-60">No match</div>
+      </div>
+    )
   }
 
   return (
     <>
       {/* Score Display */}
       <div 
-        className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 cursor-pointer"
+        className="cursor-pointer"
         onClick={() => setShowScoreModal(true)}
       >
-        <div className="bg-black bg-opacity-80 text-white px-6 py-3 rounded-lg border-2 border-white shadow-lg hover:bg-opacity-90 transition-all">
+        <div className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg border border-white border-opacity-30 shadow-lg hover:bg-opacity-30 transition-all">
           <div className="text-center">
-            <div className="text-2xl font-bold">
+            <div className="text-xl font-bold">
               {ourGoals} - {theirGoals}
             </div>
             <div className="text-xs opacity-80">{getMatchMinute()}'</div>
